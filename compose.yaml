@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: "exploresg"
       POSTGRES_USER: "exploresguser"
-      POSTGRES_PASSWORD: "exploresgpass"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-exploresgpass}"
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
       - "5432:5432"
@@ -38,7 +38,7 @@ services:
       API_BASE_URL: "/api"
       FLEET_API_BASE_URL: "/api"
       GOOGLE_CLIENT_ID: "182715694192-6q156lo1066sf1vi4o99kmfd1b22qqi7.apps.googleusercontent.com"
-      MAPBOX_TOKEN: "pk.eyJ1Ijoic3JlZS1yLW9uZSIsImEiOiJjbWgzeXFpb3cwd2R5MmlyNXgxcWRvcWw0In0.DDYbNKeGZkkpChwcKPI6pQ"
+      MAPBOX_TOKEN: "${MAPBOX_TOKEN:-pk.eyJ1Ijoic3JlZS1yLW9uZSIsImEiOiJjbWgzeXFpb3cwd2R5MmlyNXgxcWRvcWw0In0.DDYbNKeGZkkpChwcKPI6pQ}"
       APP_ENV: "production"
       DEBUG: "false"
     depends_on:
@@ -121,7 +121,7 @@ services:
       # Single external Postgres for all services
       SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/exploresg"
       SPRING_DATASOURCE_USERNAME: "exploresguser"
-      SPRING_DATASOURCE_PASSWORD: "exploresgpass"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD:-exploresgpass}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
       SPRING_SQL_INIT_MODE: "never"
@@ -129,10 +129,10 @@ services:
       SPRING_RABBITMQ_HOST: "rabbitmq"
       SPRING_RABBITMQ_PORT: "5672"
       SPRING_RABBITMQ_USERNAME: "exploresg"
-      SPRING_RABBITMQ_PASSWORD: "exploresgpass"
+      SPRING_RABBITMQ_PASSWORD: "${RABBITMQ_PASSWORD:-exploresgpass}"
       SPRING_RABBITMQ_VIRTUAL_HOST: "/"
       # Minimal security config required for startup
-      JWT_SECRET_KEY: "dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA="
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA=}"
       OAUTH2_JWT_AUDIENCES: "182715694192-6q156lo1066sf1vi4o99kmfd1b22qqi7.apps.googleusercontent.com"
       OAUTH2_JWT_ISSUER_URI: "https://accounts.google.com"
       CORS_ALLOWED_ORIGINS: "http://129.212.208.247:3000,http://localhost:3000"
@@ -165,12 +165,12 @@ services:
       SERVER_PORT: "8080"
       SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/exploresg"
       SPRING_DATASOURCE_USERNAME: "exploresguser"
-      SPRING_DATASOURCE_PASSWORD: "exploresgpass"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD:-exploresgpass}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
       SPRING_SQL_INIT_MODE: "never"
       # Minimal security config required for startup
-      JWT_SECRET_KEY: "dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA="
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA=}"
       OAUTH2_JWT_AUDIENCES: "182715694192-6q156lo1066sf1vi4o99kmfd1b22qqi7.apps.googleusercontent.com"
       OAUTH2_JWT_ISSUER_URI: "https://accounts.google.com"
       CORS_ALLOWED_ORIGINS: "http://129.212.208.247:3000,http://localhost:3000"
@@ -212,12 +212,12 @@ services:
       SERVER_PORT: "8080"
       SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/exploresg"
       SPRING_DATASOURCE_USERNAME: "exploresguser"
-      SPRING_DATASOURCE_PASSWORD: "exploresgpass"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD:-exploresgpass}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
       SPRING_SQL_INIT_MODE: "always"
       # JWT configuration
-      JWT_SECRET_KEY: "dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA="
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA=}"
     networks:
       - exploresg-net
     deploy:
@@ -247,12 +247,12 @@ services:
       SERVER_PORT: "8080"
       SPRING_DATASOURCE_URL: "jdbc:postgresql://postgres:5432/exploresg"
       SPRING_DATASOURCE_USERNAME: "exploresguser"
-      SPRING_DATASOURCE_PASSWORD: "exploresgpass"
+      SPRING_DATASOURCE_PASSWORD: "${POSTGRES_PASSWORD:-exploresgpass}"
       SPRING_DATASOURCE_DRIVER_CLASS_NAME: "org.postgresql.Driver"
       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
       SPRING_SQL_INIT_MODE: "always"
       # JWT configuration
-      JWT_SECRET_KEY: "dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA="
+      JWT_SECRET_KEY: "${JWT_SECRET_KEY:-dGhpc2lzbG9uZ2FuZHNlY3VyZXNlY3JldGtleTEyMzQ1Njc4OTA=}"
     networks:
       - exploresg-net
     deploy:
