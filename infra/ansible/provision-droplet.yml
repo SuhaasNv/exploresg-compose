@@ -1,0 +1,195 @@
+---
+- name: Provision DigitalOcean Droplet for ExploreSG
+  hosts: all
+  become: yes
+  vars:
+    docker_compose_version: "2.24.0"
+    
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install required packages
+      apt:
+        name:
+          - curl
+          - wget
+          - git
+          - unzip
+          - software-properties-common
+          - apt-transport-https
+          - ca-certificates
+          - gnupg
+          - lsb-release
+        state: present
+
+    - name: Add Docker's official GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+
+    - name: Update apt cache after adding Docker repo
+      apt:
+        update_cache: yes
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+
+    - name: Create application directory
+      file:
+        path: /opt/exploresg
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Create docker-compose directory
+      file:
+        path: /opt/exploresg/docker-compose
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Create database directory
+      file:
+        path: /opt/exploresg/db
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Create logs directory
+      file:
+        path: /opt/exploresg/logs
+        state: directory
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0755'
+
+    - name: Install Docker Compose standalone (backup)
+      get_url:
+        url: "https://github.com/docker/compose/releases/download/v{{ docker_compose_version }}/docker-compose-linux-x86_64"
+        dest: /usr/local/bin/docker-compose
+        mode: '0755'
+
+    - name: Create systemd service for ExploreSG
+      copy:
+        content: |
+          [Unit]
+          Description=ExploreSG Application
+          After=docker.service
+          Requires=docker.service
+
+          [Service]
+          Type=oneshot
+          RemainAfterExit=yes
+          WorkingDirectory=/opt/exploresg/docker-compose
+          ExecStart=/usr/bin/docker compose up -d
+          ExecStop=/usr/bin/docker compose down
+          User={{ ansible_user }}
+          Group={{ ansible_user }}
+
+          [Install]
+          WantedBy=multi-user.target
+        dest: /etc/systemd/system/exploresg.service
+        mode: '0644'
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable ExploreSG service
+      systemd:
+        name: exploresg
+        enabled: yes
+        state: started
+
+    - name: Create deployment script
+      copy:
+        content: |
+          #!/bin/bash
+          set -e
+          
+          echo "🚀 Deploying ExploreSG to DigitalOcean..."
+          
+          # Navigate to compose directory
+          cd /opt/exploresg/docker-compose
+          
+          # Pull latest images with specified tag
+          TAG=${1:-latest}
+          echo "📦 Pulling images with tag: $TAG"
+          
+          # Update compose file with tag
+          sed -i "s/:latest/:$TAG/g" compose.yaml
+          
+          # Pull images
+          docker compose pull
+          
+          # Stop existing containers
+          echo "🛑 Stopping existing containers..."
+          docker compose down
+          
+          # Start services
+          echo "🏃 Starting services..."
+          docker compose up -d
+          
+          # Show status
+          echo "📊 Service status:"
+          docker compose ps
+          
+          echo "✅ Deployment complete!"
+          echo "🌐 Application should be available at: http://$(curl -s ifconfig.me):3000"
+        dest: /opt/exploresg/deploy.sh
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+
+    - name: Create health check script
+      copy:
+        content: |
+          #!/bin/bash
+          
+          echo "🔍 Checking ExploreSG services..."
+          
+          # Check if containers are running
+          cd /opt/exploresg/docker-compose
+          docker compose ps
+          
+          # Check service health
+          echo "🏥 Health checks:"
+          echo "Frontend: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000 || echo "DOWN")"
+          echo "Auth: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/actuator/health || echo "DOWN")"
+          echo "Fleet: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8082/actuator/health || echo "DOWN")"
+          echo "Booking: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8083/actuator/health || echo "DOWN")"
+          echo "Payment: $(curl -s -o /dev/null -w "%{http_code}" http://localhost:8084/actuator/health || echo "DOWN")"
+        dest: /opt/exploresg/health-check.sh
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"

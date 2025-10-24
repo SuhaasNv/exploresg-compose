@@ -1,27 +1,30 @@
-variable "aws_region" {
-  description = "AWS region"
+variable "do_token" {
+  description = "DigitalOcean API token"
   type        = string
-  default     = "ap-southeast-1"
+  sensitive   = true
 }
 
-variable "instance_type" {
-  description = "EC2 instance type"
+variable "do_region" {
+  description = "DigitalOcean region"
   type        = string
-  default     = "t2.micro"
+  default     = "sgp1"
 }
 
-variable "key_pair_name" {
-  description = "Existing AWS EC2 key pair name"
+variable "droplet_size" {
+  description = "DigitalOcean droplet size"
   type        = string
+  default     = "s-1vcpu-1gb"
+}
+
+variable "ssh_public_key_path" {
+  description = "Path to SSH public key"
+  type        = string
+  default     = "~/.ssh/id_rsa.pub"
 }
 
 variable "ssh_private_key_path" {
-  description = "Local path to the SSH private key matching key_pair_name"
+  description = "Path to SSH private key"
   type        = string
-}
-
-variable "ssh_allowed_cidr" {
-  description = "CIDR allowed to SSH (e.g., x.x.x.x/32)"
-  type        = string
+  default     = "~/.ssh/id_rsa"
 }
 
