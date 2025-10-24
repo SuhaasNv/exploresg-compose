@@ -59,18 +59,10 @@ jobs:
         
         # Copy database files with error handling
         echo "Copying schema file..."
-        if scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/; then
-          echo "✅ Schema file copied successfully"
-        else
-          echo "⚠️ Schema file copy failed, but continuing..."
-        fi
+        scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Schema file copy failed, but continuing..."
         
         echo "Copying seed file..."
-        if scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/; then
-          echo "✅ Seed file copied successfully"
-        else
-          echo "⚠️ Seed file copy failed, but continuing..."
-        fi
+        scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Seed file copy failed, but continuing..."
         
         # Make scripts executable
         ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
