@@ -171,7 +171,7 @@ jobs:
         
         # Check for environment variable usage
         echo "Checking environment variable usage..."
-        if grep -q "\${{" compose.yaml; then
+        if grep -q "secrets\." compose.yaml; then
           echo "✅ GitHub secrets are being used"
         else
           echo "⚠️ Consider using GitHub secrets for sensitive data"
