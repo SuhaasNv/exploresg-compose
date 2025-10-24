@@ -1,0 +1,8 @@
+# DigitalOcean Configuration
+do_token = "YOUR_DIGITALOCEAN_TOKEN_HERE"
+do_region = "sgp1"  # Singapore region
+droplet_size = "s-1vcpu-1gb"  # Basic droplet (free tier equivalent)
+
+# SSH Configuration
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+ssh_private_key_path = "~/.ssh/id_rsa"
