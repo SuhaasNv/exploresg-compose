@@ -1,4 +1,4 @@
-name: 🔗 Test Connection
+name: Test Connection
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ env:
 
 jobs:
   test-connection:
-    name: 🔗 Test SSH Connection
+    name: Test SSH Connection
     runs-on: ubuntu-latest
     
     steps:

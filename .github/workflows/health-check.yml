@@ -1,4 +1,4 @@
-name: 🏥 Health Check & Monitoring
+name: Health Check & Monitoring
 
 on:
   schedule:
@@ -19,7 +19,7 @@ env:
 
 jobs:
   health-check:
-    name: 🏥 Health Check & Monitoring
+    name: Health Check & Monitoring
     runs-on: ubuntu-latest
     
     steps:

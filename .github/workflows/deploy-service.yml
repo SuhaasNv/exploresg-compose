@@ -1,4 +1,4 @@
-name: 🔧 Deploy Individual Service
+name: Deploy Individual Service
 
 on:
   workflow_dispatch:
@@ -31,7 +31,7 @@ env:
 
 jobs:
   deploy-service:
-    name: 🔧 Deploy ${{ github.event.inputs.service }} Service
+    name: Deploy ${{ github.event.inputs.service }} Service
     runs-on: ubuntu-latest
     
     steps:
