@@ -1,4 +1,4 @@
-name: 🔒 Security Scan & Compliance
+name: Security Scan & Compliance
 
 on:
   schedule:
@@ -33,7 +33,7 @@ env:
 
 jobs:
   security-scan:
-    name: 🔒 Security Scan & Compliance
+    name: Security Scan & Compliance
     runs-on: ubuntu-latest
     
     steps:
