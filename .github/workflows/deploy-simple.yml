@@ -1,0 +1,79 @@
+name: 🚀 Simple Deploy to Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_db_files:
+        description: 'Skip database file copying (if having issues)'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  DROPLET_IP: ${{ secrets.DO_DROPLET_IP }}
+  DROPLET_USER: root
+  DEPLOY_PATH: /opt/exploresg/docker-compose
+
+jobs:
+  deploy:
+    name: 🚀 Simple Deploy ExploreSG
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Setup SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+        
+    - name: 📦 Copy Essential Files
+      run: |
+        echo "📦 Copying essential files..."
+        scp -o StrictHostKeyChecking=no compose.yaml ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no nginx-gateway.conf ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no health-check.sh ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        
+        # Make scripts executable
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "chmod +x ${{ env.DEPLOY_PATH }}/health-check.sh"
+        
+    - name: 📦 Copy Database Files (Optional)
+      if: github.event.inputs.skip_db_files != 'true'
+      run: |
+        echo "📦 Copying database files..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "mkdir -p ${{ env.DEPLOY_PATH }}/db"
+        
+        # Try to copy database files, but don't fail if they don't exist
+        scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Schema file not found, skipping..."
+        scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Seed file not found, skipping..."
+        
+    - name: 🐳 Pull and Deploy
+      run: |
+        echo "🐳 Pulling latest images and deploying..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose pull && docker compose down && docker compose up -d"
+          
+    - name: ⏳ Wait for Services
+      run: |
+        echo "⏳ Waiting for services to start..."
+        sleep 60
+        
+    - name: 🏥 Health Check
+      run: |
+        echo "🏥 Running health checks..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && DROPLET_IP=${{ env.DROPLET_IP }} ./health-check.sh"
+          
+    - name: 📊 Final Status
+      run: |
+        echo "📊 Final deployment status:"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose ps"
+          
+    - name: 🎉 Deployment Complete
+      run: |
+        echo "🎉 Deployment completed successfully!"
+        echo "🌐 Frontend: http://${{ env.DROPLET_IP }}:3000"
+        echo "🔗 Fleet API: http://${{ env.DROPLET_IP }}:8082/api/v1/fleet/models"

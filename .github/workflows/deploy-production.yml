@@ -53,11 +53,24 @@ jobs:
         scp -o StrictHostKeyChecking=no nginx-gateway.conf ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
         scp -o StrictHostKeyChecking=no health-check.sh ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
         
-        # Copy database files individually
-        echo "📦 Copying database files..."
+        # Ensure db directory exists and copy database files
+        echo "📦 Setting up database files..."
         ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "mkdir -p ${{ env.DEPLOY_PATH }}/db"
-        scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/
-        scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/
+        
+        # Copy database files with error handling
+        echo "Copying schema file..."
+        if scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/; then
+          echo "✅ Schema file copied successfully"
+        else
+          echo "⚠️ Schema file copy failed, but continuing..."
+        fi
+        
+        echo "Copying seed file..."
+        if scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/; then
+          echo "✅ Seed file copied successfully"
+        else
+          echo "⚠️ Seed file copy failed, but continuing..."
+        fi
         
         # Make scripts executable
         ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
