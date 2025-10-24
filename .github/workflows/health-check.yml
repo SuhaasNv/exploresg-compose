@@ -1,0 +1,218 @@
+name: 🏥 Health Check & Monitoring
+
+on:
+  schedule:
+    # Run every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    inputs:
+      detailed_check:
+        description: 'Run detailed health checks'
+        required: false
+        type: boolean
+        default: false
+
+env:
+  DROPLET_IP: ${{ secrets.DO_DROPLET_IP }}
+  DROPLET_USER: root
+  DEPLOY_PATH: /opt/exploresg/docker-compose
+
+jobs:
+  health-check:
+    name: 🏥 Health Check & Monitoring
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Setup SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+        
+    - name: 🐳 Container Status Check
+      id: container_status
+      run: |
+        echo "🐳 Checking container status..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose ps" > container_status.txt
+        
+        # Check if all containers are running
+        if grep -q "Up" container_status.txt; then
+          echo "✅ Containers are running"
+          echo "container_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Some containers are not running"
+          echo "container_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+        cat container_status.txt
+        
+    - name: 🔗 API Health Checks
+      id: api_health
+      run: |
+        echo "🔗 Running API health checks..."
+        
+        # Frontend check
+        echo "Checking frontend..."
+        if curl -f -s http://${{ env.DROPLET_IP }}:3000 > /dev/null; then
+          echo "✅ Frontend is responding"
+          echo "frontend_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Frontend is not responding"
+          echo "frontend_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+        # Auth service check
+        echo "Checking auth service..."
+        if curl -f -s http://${{ env.DROPLET_IP }}:8081/actuator/health > /dev/null; then
+          echo "✅ Auth service is healthy"
+          echo "auth_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Auth service is not healthy"
+          echo "auth_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+        # Fleet service check
+        echo "Checking fleet service..."
+        if curl -f -s http://${{ env.DROPLET_IP }}:8082/actuator/health > /dev/null; then
+          echo "✅ Fleet service is healthy"
+          echo "fleet_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Fleet service is not healthy"
+          echo "fleet_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+        # Booking service check
+        echo "Checking booking service..."
+        if curl -f -s http://${{ env.DROPLET_IP }}:8083/actuator/health > /dev/null; then
+          echo "✅ Booking service is healthy"
+          echo "booking_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Booking service is not healthy"
+          echo "booking_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+        # Payment service check
+        echo "Checking payment service..."
+        if curl -f -s http://${{ env.DROPLET_IP }}:8084/actuator/health > /dev/null; then
+          echo "✅ Payment service is healthy"
+          echo "payment_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Payment service is not healthy"
+          echo "payment_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 🗄️ Database Health Check
+      id: db_health
+      run: |
+        echo "🗄️ Checking database connectivity..."
+        if ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose exec -T postgres pg_isready -U exploresguser -d exploresg" > /dev/null 2>&1; then
+          echo "✅ Database is accessible"
+          echo "db_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Database is not accessible"
+          echo "db_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 🐰 RabbitMQ Health Check
+      id: rabbitmq_health
+      run: |
+        echo "🐰 Checking RabbitMQ..."
+        if ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose exec -T rabbitmq rabbitmq-diagnostics ping" > /dev/null 2>&1; then
+          echo "✅ RabbitMQ is healthy"
+          echo "rabbitmq_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ RabbitMQ is not healthy"
+          echo "rabbitmq_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 📊 Detailed System Check
+      if: github.event.inputs.detailed_check == 'true'
+      run: |
+        echo "📊 Running detailed system checks..."
+        
+        # Check disk space
+        echo "💾 Disk space usage:"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "df -h"
+          
+        # Check memory usage
+        echo "🧠 Memory usage:"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "free -h"
+          
+        # Check Docker system info
+        echo "🐳 Docker system info:"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "docker system df"
+          
+        # Check service logs for errors
+        echo "📋 Recent service logs:"
+        for service in auth fleet booking payment; do
+          echo "--- $service logs ---"
+          ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+            "cd ${{ env.DEPLOY_PATH }} && docker compose logs --tail=10 $service" || echo "No logs for $service"
+        done
+        
+    - name: 📈 Performance Metrics
+      if: github.event.inputs.detailed_check == 'true'
+      run: |
+        echo "📈 Collecting performance metrics..."
+        
+        # API response times
+        echo "⏱️ API Response Times:"
+        for service in auth fleet booking payment; do
+          port=""
+          case "$service" in
+            auth) port=8081 ;;
+            fleet) port=8082 ;;
+            booking) port=8083 ;;
+            payment) port=8084 ;;
+          esac
+          echo "Testing $service on port $port..."
+          time curl -f -s http://${{ env.DROPLET_IP }}:$port/actuator/health > /dev/null || echo "Failed to reach $service"
+        done
+        
+    - name: 🚨 Health Status Summary
+      run: |
+        echo "🚨 Health Check Summary:"
+        echo "Container Status: ${{ steps.container_status.outputs.container_status }}"
+        echo "Frontend Status: ${{ steps.api_health.outputs.frontend_status }}"
+        echo "Auth Status: ${{ steps.api_health.outputs.auth_status }}"
+        echo "Fleet Status: ${{ steps.api_health.outputs.fleet_status }}"
+        echo "Booking Status: ${{ steps.api_health.outputs.booking_status }}"
+        echo "Payment Status: ${{ steps.api_health.outputs.payment_status }}"
+        echo "Database Status: ${{ steps.db_health.outputs.db_status }}"
+        echo "RabbitMQ Status: ${{ steps.rabbitmq_health.outputs.rabbitmq_status }}"
+        
+        # Determine overall health
+        if [[ "${{ steps.container_status.outputs.container_status }}" == "healthy" && 
+              "${{ steps.api_health.outputs.frontend_status }}" == "healthy" && 
+              "${{ steps.api_health.outputs.auth_status }}" == "healthy" && 
+              "${{ steps.api_health.outputs.fleet_status }}" == "healthy" && 
+              "${{ steps.db_health.outputs.db_status }}" == "healthy" && 
+              "${{ steps.rabbitmq_health.outputs.rabbitmq_status }}" == "healthy" ]]; then
+          echo "✅ Overall Status: HEALTHY"
+          echo "overall_status=healthy" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Overall Status: UNHEALTHY"
+          echo "overall_status=unhealthy" >> $GITHUB_OUTPUT
+        fi
+        
+    - name: 🚨 Alert on Health Issues
+      if: steps.health_status.outputs.overall_status == 'unhealthy'
+      run: |
+        echo "🚨 ALERT: System health issues detected!"
+        echo "Please check the logs above and consider taking action."
+        # Here you could add Slack notifications, email alerts, etc.
+        
+    - name: ✅ Health Check Complete
+      if: always()
+      run: |
+        echo "✅ Health check completed at $(date)"
+        echo "🌐 Frontend: http://${{ env.DROPLET_IP }}:3000"
+        echo "🔗 Fleet API: http://${{ env.DROPLET_IP }}:8082/api/v1/fleet/models"

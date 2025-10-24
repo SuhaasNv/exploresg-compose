@@ -1,0 +1,118 @@
+name: 🚀 Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag to deploy (default: latest)'
+        required: false
+        default: 'latest'
+      services:
+        description: 'Services to deploy (comma-separated, leave empty for all)'
+        required: false
+        default: ''
+
+env:
+  DROPLET_IP: ${{ secrets.DO_DROPLET_IP }}
+  DROPLET_USER: root
+  DEPLOY_PATH: /opt/exploresg/docker-compose
+
+jobs:
+  deploy:
+    name: 🚀 Deploy ExploreSG to Production
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Repository
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup Deployment Environment
+      run: |
+        echo "🚀 Starting ExploreSG Production Deployment"
+        echo "📍 Target: ${{ env.DROPLET_IP }}"
+        echo "🏷️ Tag: ${{ github.event.inputs.tag || 'latest' }}"
+        echo "📦 Services: ${{ github.event.inputs.services || 'all' }}"
+        
+    - name: 🔐 Setup SSH Key
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+        
+    - name: 📋 Pre-deployment Health Check
+      run: |
+        echo "🏥 Checking current deployment status..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose ps" || echo "⚠️ No existing deployment found"
+          
+    - name: 📦 Copy Files to Droplet
+      run: |
+        echo "📦 Copying deployment files..."
+        scp -o StrictHostKeyChecking=no compose.yaml ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no nginx-gateway.conf ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no -r db/ ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        
+    - name: 🐳 Pull Latest Images
+      run: |
+        echo "📥 Pulling latest Docker images..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose pull"
+          
+    - name: 🛑 Graceful Service Shutdown
+      run: |
+        echo "🛑 Gracefully stopping services..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose down --timeout 30" || echo "⚠️ Some services may not have been running"
+          
+    - name: 🚀 Deploy Services
+      run: |
+        echo "🚀 Starting services with latest images..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose up -d"
+          
+    - name: ⏳ Wait for Services to Start
+      run: |
+        echo "⏳ Waiting for services to initialize..."
+        sleep 60
+        
+    - name: 🏥 Health Check
+      run: |
+        echo "🏥 Running health checks..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && ./status-check.sh" || echo "⚠️ Health check script not found, running manual checks"
+          
+        # Manual health checks
+        echo "🔍 Checking service health..."
+        for service in auth fleet booking payment; do
+          port=""
+          case "$service" in
+            auth) port=8081 ;;
+            fleet) port=8082 ;;
+            booking) port=8083 ;;
+            payment) port=8084 ;;
+          esac
+          echo "Checking $service on port $port..."
+          curl -f http://${{ env.DROPLET_IP }}:$port/actuator/health || echo "⚠️ $service not responding"
+        done
+        
+    - name: 📊 Deployment Status
+      run: |
+        echo "📊 Final deployment status:"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "cd ${{ env.DEPLOY_PATH }} && docker compose ps"
+          
+    - name: 🎉 Deployment Success
+      if: success()
+      run: |
+        echo "🎉 ExploreSG Production Deployment Successful!"
+        echo "🌐 Frontend: http://${{ env.DROPLET_IP }}:3000"
+        echo "🔗 Fleet API: http://${{ env.DROPLET_IP }}:8082/api/v1/fleet/models"
+        echo "🔗 Auth API: http://${{ env.DROPLET_IP }}:8081/actuator/health"
+        
+    - name: 🚨 Deployment Failed
+      if: failure()
+      run: |
+        echo "🚨 Deployment failed! Check logs above."
+        echo "🔄 Consider rolling back to previous version..."
+        exit 1

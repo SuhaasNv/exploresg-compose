@@ -1,0 +1,48 @@
+name: Deploy to DigitalOcean
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Docker image tag to deploy'
+        required: true
+        default: 'latest'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup SSH
+      uses: webfactory/ssh-agent@v0.7.0
+      with:
+        ssh-private-key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
+        
+    - name: Deploy to DigitalOcean
+      run: |
+        # Get the tag from input or use latest
+        TAG=${INPUT_TAG:-latest}
+        echo "Deploying with tag: $TAG"
+        
+        # SSH into the droplet and run deployment
+        ssh -o StrictHostKeyChecking=no root@${{ secrets.DO_DROPLET_IP }} "
+          cd /opt/exploresg/docker-compose &&
+          ./deploy.sh $TAG
+        "
+        
+    - name: Health Check
+      run: |
+        echo "Waiting for services to be ready..."
+        sleep 60
+        
+        # Check if services are responding
+        curl -f http://${{ secrets.DO_DROPLET_IP }}:3000 || echo "Frontend not ready yet"
+        curl -f http://${{ secrets.DO_DROPLET_IP }}:8081/actuator/health || echo "Auth service not ready yet"
+        
+        echo "Deployment completed!"
+
