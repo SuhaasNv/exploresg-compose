@@ -94,9 +94,40 @@ jobs:
         ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
           "cd ${{ env.DEPLOY_PATH }} && docker compose up -d"
           
-    - name: ⏳ Wait for Services to Start
+    - name: ⏳ Wait for Infrastructure Services
       run: |
-        echo "⏳ Waiting for services to initialize..."
+        echo "⏳ Waiting for infrastructure services (Postgres, RabbitMQ)..."
+        sleep 30
+        
+        # Wait for Postgres to be healthy
+        echo "🗄️ Waiting for Postgres to be healthy..."
+        for i in {1..10}; do
+          if ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+            "cd ${{ env.DEPLOY_PATH }} && docker compose exec -T postgres pg_isready -U exploresguser -d exploresg" > /dev/null 2>&1; then
+            echo "✅ Postgres is ready"
+            break
+          else
+            echo "⏳ Waiting for Postgres... ($i/10)"
+            sleep 10
+          fi
+        done
+        
+        # Wait for RabbitMQ to be healthy
+        echo "🐰 Waiting for RabbitMQ to be healthy..."
+        for i in {1..10}; do
+          if ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+            "cd ${{ env.DEPLOY_PATH }} && docker compose exec -T rabbitmq rabbitmq-diagnostics ping" > /dev/null 2>&1; then
+            echo "✅ RabbitMQ is ready"
+            break
+          else
+            echo "⏳ Waiting for RabbitMQ... ($i/10)"
+            sleep 10
+          fi
+        done
+        
+    - name: ⏳ Wait for Application Services
+      run: |
+        echo "⏳ Waiting for application services to start..."
         sleep 60
         
     - name: 🏥 Health Check
