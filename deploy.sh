@@ -36,7 +36,15 @@ docker compose ps
 
 # Health check
 echo "🏥 Running health checks..."
-./health-check.sh
+if [ -f "./health-check.sh" ]; then
+    ./health-check.sh
+else
+    echo "⚠️ health-check.sh not found, running basic checks..."
+    echo "📊 Service status:"
+    docker compose ps
+    echo "🔗 Testing frontend..."
+    curl -f http://localhost:3000 > /dev/null && echo "✅ Frontend responding" || echo "❌ Frontend not responding"
+fi
 
 echo "✅ Deployment complete!"
 echo "🌐 Application should be available at: http://$(curl -s ifconfig.me):3000"

@@ -51,7 +51,12 @@ jobs:
         echo "📦 Copying deployment files..."
         scp -o StrictHostKeyChecking=no compose.yaml ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
         scp -o StrictHostKeyChecking=no nginx-gateway.conf ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no health-check.sh ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
         scp -o StrictHostKeyChecking=no -r db/ ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        
+        # Make scripts executable
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "chmod +x ${{ env.DEPLOY_PATH }}/health-check.sh"
         
     - name: 🐳 Pull Latest Images
       run: |
