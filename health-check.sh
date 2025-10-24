@@ -16,9 +16,18 @@ docker compose ps
 echo ""
 echo "🔗 API Health Checks:"
 
+# Get the external IP if running in GitHub Actions, otherwise use localhost
+if [ -n "$DROPLET_IP" ]; then
+    BASE_URL="http://$DROPLET_IP"
+    echo "🌐 Using external IP: $DROPLET_IP"
+else
+    BASE_URL="http://localhost"
+    echo "🏠 Using localhost"
+fi
+
 # Frontend check
 echo "Checking frontend..."
-if curl -f -s http://localhost:3000 > /dev/null; then
+if curl -f -s $BASE_URL:3000 > /dev/null; then
     echo "✅ Frontend is responding"
 else
     echo "❌ Frontend is not responding"
@@ -26,7 +35,7 @@ fi
 
 # Auth service check
 echo "Checking auth service..."
-if curl -f -s http://localhost:8081/actuator/health > /dev/null; then
+if curl -f -s $BASE_URL:8081/actuator/health > /dev/null; then
     echo "✅ Auth service is healthy"
 else
     echo "❌ Auth service is not healthy"
@@ -34,7 +43,7 @@ fi
 
 # Fleet service check
 echo "Checking fleet service..."
-if curl -f -s http://localhost:8082/actuator/health > /dev/null; then
+if curl -f -s $BASE_URL:8082/actuator/health > /dev/null; then
     echo "✅ Fleet service is healthy"
 else
     echo "❌ Fleet service is not healthy"
@@ -42,7 +51,7 @@ fi
 
 # Booking service check
 echo "Checking booking service..."
-if curl -f -s http://localhost:8083/actuator/health > /dev/null; then
+if curl -f -s $BASE_URL:8083/actuator/health > /dev/null; then
     echo "✅ Booking service is healthy"
 else
     echo "❌ Booking service is not healthy"
@@ -50,7 +59,7 @@ fi
 
 # Payment service check
 echo "Checking payment service..."
-if curl -f -s http://localhost:8084/actuator/health > /dev/null; then
+if curl -f -s $BASE_URL:8084/actuator/health > /dev/null; then
     echo "✅ Payment service is healthy"
 else
     echo "❌ Payment service is not healthy"

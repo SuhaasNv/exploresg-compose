@@ -85,10 +85,10 @@ jobs:
       run: |
         echo "🏥 Running health checks..."
         ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
-          "cd ${{ env.DEPLOY_PATH }} && ./status-check.sh" || echo "⚠️ Health check script not found, running manual checks"
+          "cd ${{ env.DEPLOY_PATH }} && DROPLET_IP=${{ env.DROPLET_IP }} ./health-check.sh" || echo "⚠️ Health check script not found, running manual checks"
           
-        # Manual health checks
-        echo "🔍 Checking service health..."
+        # Manual health checks as backup
+        echo "🔍 Running backup health checks..."
         for service in auth fleet booking payment; do
           port=""
           case "$service" in
