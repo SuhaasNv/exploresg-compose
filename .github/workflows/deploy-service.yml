@@ -62,6 +62,17 @@ jobs:
         echo "📦 Copying updated configuration files..."
         scp -o StrictHostKeyChecking=no compose.yaml ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
         scp -o StrictHostKeyChecking=no nginx-gateway.conf ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        scp -o StrictHostKeyChecking=no health-check.sh ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/
+        
+        # Copy database files if they don't exist
+        echo "📦 Ensuring database files exist..."
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "mkdir -p ${{ env.DEPLOY_PATH }}/db"
+        scp -o StrictHostKeyChecking=no db/00-schema.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Schema file copy failed"
+        scp -o StrictHostKeyChecking=no db/seed-fleet.sql ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }}:${{ env.DEPLOY_PATH }}/db/ || echo "⚠️ Seed file copy failed"
+        
+        # Make scripts executable
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} \
+          "chmod +x ${{ env.DEPLOY_PATH }}/health-check.sh"
         
     - name: 🐳 Pull Latest Image
       run: |
