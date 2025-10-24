@@ -50,28 +50,21 @@ jobs:
         RABBITMQ_PASSWORD="SecureRabbitMQ_$(date +%s)_$(openssl rand -hex 8)"
         JWT_SECRET="$(openssl rand -base64 64)"
         
-        # Create .env file on droplet
-        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "cat > ${{ env.DEPLOY_PATH }}/.env << 'EOF'
-# ExploreSG Secure Environment Configuration
-# Generated on $(date)
-
-# Database Configuration
-POSTGRES_PASSWORD=$DB_PASSWORD
-
-# RabbitMQ Configuration  
-RABBITMQ_PASSWORD=$RABBITMQ_PASSWORD
-
-# JWT Configuration
-JWT_SECRET_KEY=$JWT_SECRET
-
-# Mapbox Configuration (keep existing token)
-MAPBOX_TOKEN=pk.eyJ1Ijoic3JlZS1yLW9uZSIsImEiOiJjbWgzeXFpb3cwd2R5MmlyNXgxcWRvcWw0In0.DDYbNKeGZkkpChwcKPI6pQ
-
-# Security Notes
-# - All passwords are randomly generated
-# - JWT secret is cryptographically secure
-# - Generated on: $(date)
-EOF"
+        # Create .env file on droplet using individual echo commands
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# ExploreSG Secure Environment Configuration' > ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# Generated on $(date)' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# Database Configuration' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo 'POSTGRES_PASSWORD=$DB_PASSWORD' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# RabbitMQ Configuration' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo 'RABBITMQ_PASSWORD=$RABBITMQ_PASSWORD' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# JWT Configuration' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo 'JWT_SECRET_KEY=$JWT_SECRET' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo '# Mapbox Configuration' >> ${{ env.DEPLOY_PATH }}/.env"
+        ssh -o StrictHostKeyChecking=no ${{ env.DROPLET_USER }}@${{ env.DROPLET_IP }} "echo 'MAPBOX_TOKEN=pk.eyJ1Ijoic3JlZS1yLW9uZSIsImEiOiJjbWgzeXFpb3cwd2R5MmlyNXgxcWRvcWw0In0.DDYbNKeGZkkpChwcKPI6pQ' >> ${{ env.DEPLOY_PATH }}/.env"
         
         echo "✅ Secure .env file created with random secrets"
         
